@@ -148,7 +148,7 @@ typedef struct TopsRuntimesFunctions_t {
     ttopsMemset               *lib_topsMemset;
     ttopsFree                 *lib_topsFree;
     ttopsHostFree             *lib_topsHostFree;
-
+    /*TODO*/
     TOPS_LIB_HANDLE lib;
 } TopsRuntimesFunctions;
 
