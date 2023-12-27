@@ -31,4 +31,5 @@ typedef  i32_t ttopscodecDecFrameMap(topscodecHandle_t handle, topscodecFrame_t 
 typedef  i32_t ttopscodecDecFrameUnmap(topscodecHandle_t handle, topscodecFrame_t *frame);
 typedef  i32_t ttopscodecDecGetStatus(topscodecHandle_t handle, topscodecDecStatus_t *status);
 typedef  i32_t ttopscodecGetLoading(topscodecDevID_t deviceID, u32_t sess_id, double *loading);
+
 #endif //_DYNLINK_TOPS_CODEC_H_

@@ -122,8 +122,17 @@ typedef struct TopsCodecFunctions_t {
 } TopsCodecFunctions;
 
 typedef struct TopsRuntimesFunctions_t {
+    ttopsInit                 *lib_topsInit;
+    ttopsDriverGetVersion     *lib_topsDriverGetVersion;
     ttopsRuntimeGetVersion    *lib_topsRuntimeGetVersion;
     ttopsDeviceGet            *lib_topsDeviceGet;
+    ttopsDeviceComputeCapability *lib_topsDeviceComputeCapability;
+    ttopsDeviceGetPCIBusId    *lib_topsDeviceGetPCIBusId;
+    ttopsDeviceGetByPCIBusId  *lib_topsDeviceGetByPCIBusId;
+    ttopsDeviceTotalMem       *lib_topsDeviceTotalMem;
+    ttopsDeviceSynchronize    *lib_topsDeviceSynchronize;
+    ttopsDeviceReset          *lib_topsDeviceReset;
+    ttopsSetDevice            *lib_topsSetDevice;
     ttopsDeviceGetName        *lib_topsDeviceGetName;
     ttopsGetErrorName         *lib_topsGetErrorName;
     ttopsGetErrorString       *lib_topsGetErrorString;
@@ -187,7 +196,29 @@ static inline int topsruntimes_load_functions(TopsRuntimesFunctions **functions)
     GENERIC_LOAD_FUNC_PREAMBLE(TopsRuntimesFunctions,
                                 topsruntimes, 
                                 TOPS_RUNTIMES_LIBNAME);
-
+    LOAD_SYMBOL(lib_topsInit,                ttopsInit, "topsInit");
+    LOAD_SYMBOL(lib_topsDriverGetVersion,    ttopsDriverGetVersion,
+                                             "topsDriverGetVersion");
+    LOAD_SYMBOL(lib_topsRuntimeGetVersion,   ttopsRuntimeGetVersion,
+                                             "topsRuntimeGetVersion");
+    LOAD_SYMBOL(lib_topsDeviceGet,           ttopsDeviceGet,
+                                             "topsDeviceGet");
+    LOAD_SYMBOL(lib_topsDeviceComputeCapability,    ttopsDeviceComputeCapability,
+                                             "topsDeviceComputeCapability");
+    LOAD_SYMBOL(lib_topsDeviceGetName,       ttopsDeviceGetName,
+                                             "topsDeviceGetName");
+    LOAD_SYMBOL(lib_topsDeviceGetPCIBusId,    ttopsDeviceGetPCIBusId,
+                                             "topsDeviceGetPCIBusId");
+    LOAD_SYMBOL(lib_topsDeviceGetByPCIBusId, ttopsDeviceGetByPCIBusId,
+                                             "topsDeviceGetByPCIBusId");
+    LOAD_SYMBOL(lib_topsDeviceTotalMem,       ttopsDeviceTotalMem,
+                                             "topsDeviceTotalMem");
+    LOAD_SYMBOL(lib_topsDeviceSynchronize,    ttopsDeviceSynchronize,
+                                             "topsDeviceSynchronize");
+    LOAD_SYMBOL(lib_topsDeviceReset,          ttopsDeviceReset,
+                                             "topsDeviceReset");
+    LOAD_SYMBOL(lib_topsSetDevice,           ttopsSetDevice,
+                                             "topsSetDevice");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
     LOAD_SYMBOL(lib_topsRuntimeGetVersion,    ttopsRuntimeGetVersion,
                                              "topsRuntimeGetVersion");
     LOAD_SYMBOL(lib_topsDeviceGet,            ttopsDeviceGet,
