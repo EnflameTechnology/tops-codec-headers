@@ -25,6 +25,7 @@
 #define TOPS_INCLUDE_TOPS_TOPS_RUNTIME_API_H
 #include <string.h>  // for getDeviceProp
 #include <limits.h>
+#include <stdlib.h>
 #include <tops/tops_version.h>
 #include <tops/tops_common.h>
 
@@ -87,6 +88,8 @@ typedef struct topsDeviceProp_t {
     int concurrentManagedAccess;     ///< Device can coherently access managed memory concurrently with the CPU
     int pageableMemoryAccess;        ///< Device supports coherently accessing pageable memory
                                      ///< without calling topsHostRegister on it
+
+    int unifiedAddressing;
     // NOTE: tops extern
     int mc_channel;            ///< Memory Control Channel count.
     size_t localMemPerThread;  ///< Size of local memory region (in bytes).
@@ -323,12 +326,6 @@ struct itopsTensor_t {};
 #endif
 #include <tops/host_defines.h>
 #include <tops/driver_types.h>
-#if defined(_MSC_VER)
-#define DEPRECATED(msg) __declspec(deprecated(msg))
-#else // !defined(_MSC_VER)
-#define DEPRECATED(msg) __attribute__ ((deprecated(msg)))
-#endif // !defined(_MSC_VER)
-#define DEPRECATED_MSG "This API is marked as deprecated and may not be supported in future releases."
 #define TOPS_LAUNCH_PARAM_BUFFER_POINTER ((void*)0x01)
 #define TOPS_LAUNCH_PARAM_BUFFER_SIZE ((void*)0x02)
 #define TOPS_LAUNCH_PARAM_END ((void*)0x03)
@@ -337,9 +334,6 @@ struct itopsTensor_t {};
           = x
 #else
   #define __dparm(x)
-#endif
-#ifdef __GNUC__
-#pragma GCC visibility push (default)
 #endif
 
 // Structure definitions:
@@ -821,6 +815,87 @@ typedef struct dim3 {
 
 #endif
 } dim3;
+
+enum topsLaunchAttributeID {
+    topsLaunchAttributeIgnore = 0,
+    //topsLaunchAttributeAccessPolicyWindow = 1,
+    topsLaunchAttributeCooperative = 2,
+    //topsLaunchAttributeSynchronizationPolicy = 3,
+    topsLaunchAttributeThreadDimension = 4,
+    //topsLaunchAttributeClusterSchedulingPolicyPreference = 5,
+    //topsLaunchAttributeProgrammaticStreamSerialization = 6,
+    //topsLaunchAttributeProgrammaticEvent = 7,
+    //topsLaunchAttributePriority = 8,
+    //topsLaunchAttributeMemSyncDomainMap = 9,
+    //topsLaunchAttributeMemSyncDomain = 10,
+    //topsLaunchAttributeLaunchCompletionEvent = 12,
+};
+
+enum topsClusterSchedulingPolicy {
+    topsClusterSchedulingPolicyDefault = 0,
+    topsClusterSchedulingPolicySpread = 1,
+    topsClusterSchedulingPolicyLoadBalancing = 2,
+};
+
+enum topsAccessProperty {
+    topsAccessPropertyNormal = 0,
+    topsAccessPropertyStreaming = 1,
+    topsAccessPropertyPersisting = 2,
+};
+
+enum topsSynchronizationPolicy {
+    topsSynchronizationPolicyNone = 0,
+};
+
+enum topsLaunchMemSyncDomain {
+    topsLaunchMemSyncDomainDefault = 0,
+    topsLaunchMemSyncDomainRemote = 1,
+};
+
+struct topsAccessPolicyWindow {
+    void                   *base_ptr;
+    enum topsAccessProperty hitProp;
+    float                   hitRatio;
+    enum topsAccessProperty missProp;
+    size_t                  num_bytes;
+};
+
+struct topsLaunchMemSyncDomainMap {
+    unsigned char  default_;
+    unsigned char  remote;
+};
+
+union topsLaunchAttributeValue {
+    struct topsAccessPolicyWindow       accessPolicyWindow;
+    dim3                                ThreadDim;
+    enum topsClusterSchedulingPolicy         clusterSchedulingPolicyPreference;
+    int                                 cooperative;
+    topsEvent_t                         event;
+    int                                 flags;
+    int                                 launchCompletionEvent;
+    enum topsLaunchMemSyncDomain        memSyncDomain;
+    struct topsLaunchMemSyncDomainMap   memSyncDomainMap;
+    int                                 priority;
+    int                                 programmaticEvent;
+    int                                 programmaticStreamSerializationAllowed;
+    enum topsSynchronizationPolicy      syncPolicy;
+    int                                 triggerAtBlockStart;
+};
+
+struct topsLaunchAttribute {
+    enum topsLaunchAttributeID               id;
+    union topsLaunchAttributeValue      val;
+};
+
+typedef struct topsLaunchConfig {
+    struct topsLaunchAttribute * attrs;
+    dim3    blockDim;
+    size_t  dynamicSmemBytes;
+    dim3    gridDim;
+    unsigned int  numAttrs;
+    topsStream_t  stream;
+} topsLaunchConfig_t;
+
 typedef struct topsLaunchParams_t {
     void* func;             ///< Device function symbol
     dim3 gridDim;           ///< Grid dimensions
@@ -986,6 +1061,7 @@ typedef topsGraphicsResource* topsGraphicsResource_t;
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsInit(unsigned int flags);
 /**
  * @brief Returns the approximate TOPS driver version.
@@ -1032,6 +1108,7 @@ topsError_t topsInit(unsigned int flags);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDriverGetVersion(int* driverVersion);
 /**
  * @brief Returns the approximate TOPS Runtime version.
@@ -1078,6 +1155,7 @@ topsError_t topsDriverGetVersion(int* driverVersion);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsRuntimeGetVersion(int* runtimeVersion);
 /**
  * @brief Returns a handle to a compute device
@@ -1119,6 +1197,7 @@ topsError_t topsRuntimeGetVersion(int* runtimeVersion);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceGet(topsDevice_t* device, int ordinal);
 /**
  * @brief Returns the compute capability of the device
@@ -1161,6 +1240,7 @@ topsError_t topsDeviceGet(topsDevice_t* device, int ordinal);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceComputeCapability(int* major, int* minor, topsDevice_t device);
 /**
  * @brief Returns an identifier string for the device.
@@ -1204,6 +1284,7 @@ topsError_t topsDeviceComputeCapability(int* major, int* minor, topsDevice_t dev
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceGetName(char* name, int len, topsDevice_t device);
 /**
  * @brief Returns a PCI Bus Id string for the device, overloaded to take int device ID.
@@ -1246,6 +1327,7 @@ topsError_t topsDeviceGetName(char* name, int len, topsDevice_t device);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceGetPCIBusId(char* pciBusId, int len, int device);
 /**
  * @brief Returns a handle to a compute device.
@@ -1287,6 +1369,7 @@ topsError_t topsDeviceGetPCIBusId(char* pciBusId, int len, int device);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceGetByPCIBusId(int* device, const char* pciBusId);
 /**
  * @brief Returns the total amount of memory on the device.
@@ -1328,6 +1411,7 @@ topsError_t topsDeviceGetByPCIBusId(int* device, const char* pciBusId);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceTotalMem(size_t* bytes, topsDevice_t device);
 // doxygen end initialization
 /**
@@ -1381,6 +1465,7 @@ topsError_t topsDeviceTotalMem(size_t* bytes, topsDevice_t device);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceSynchronize(void);
 /**
  * @brief The state of current device is discarded and updated to a fresh state.
@@ -1426,6 +1511,7 @@ topsError_t topsDeviceSynchronize(void);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceReset(void);
 /**
  * @brief Set default device to be used for subsequent tops API calls from this thread.
@@ -1491,6 +1577,7 @@ topsError_t topsDeviceReset(void);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsSetDevice(int deviceId);
 /**
  * @brief Return the default device id for the calling host thread.
@@ -1536,6 +1623,7 @@ topsError_t topsSetDevice(int deviceId);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetDevice(int* deviceId);
 /**
  * @brief Return number of compute-capable devices.
@@ -1582,6 +1670,7 @@ topsError_t topsGetDevice(int* deviceId);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetDeviceCount(int* count);
 /**
  * @brief Query for a specific device attribute.
@@ -1625,6 +1714,7 @@ topsError_t topsGetDeviceCount(int* count);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceGetAttribute(int* pi, topsDeviceAttribute_t attr, int deviceId);
 /**
  * @brief Returns device properties.
@@ -1672,6 +1762,7 @@ topsError_t topsDeviceGetAttribute(int* pi, topsDeviceAttribute_t attr, int devi
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetDeviceProperties(topsDeviceProp_t* prop, int deviceId);
 /**
  * @brief Get Resource limits of current device
@@ -1715,6 +1806,7 @@ topsError_t topsGetDeviceProperties(topsDeviceProp_t* prop, int deviceId);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDeviceGetLimit(size_t* pValue, enum topsLimit_t limit);
 /**
  * @brief Gets the flags set for current device
@@ -1756,6 +1848,7 @@ topsError_t topsDeviceGetLimit(size_t* pValue, enum topsLimit_t limit);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetDeviceFlags(unsigned int* flags);
 /**
  * @brief The current device behavior is changed according the flags passed.
@@ -1818,6 +1911,7 @@ topsError_t topsGetDeviceFlags(unsigned int* flags);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsSetDeviceFlags(unsigned flags);
 /**
  * @brief Device which matches topsDeviceProp_t is returned
@@ -1860,6 +1954,7 @@ topsError_t topsSetDeviceFlags(unsigned flags);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsChooseDevice(int* device, const topsDeviceProp_t* prop);
 
 /**
@@ -1919,6 +2014,7 @@ topsError_t topsChooseDevice(int* device, const topsDeviceProp_t* prop);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsIpcGetMemHandle(topsIpcMemHandle_t* handle, void* devPtr);
 
 /**
@@ -1990,6 +2086,7 @@ topsError_t topsIpcGetMemHandle(topsIpcMemHandle_t* handle, void* devPtr);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsIpcOpenMemHandle(void** devPtr, topsIpcMemHandle_t handle,
                                  unsigned int flags);
 
@@ -2043,6 +2140,7 @@ topsError_t topsIpcOpenMemHandle(void** devPtr, topsIpcMemHandle_t handle,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsIpcCloseMemHandle(void* devPtr);
 
 /**
@@ -2095,6 +2193,7 @@ topsError_t topsIpcCloseMemHandle(void* devPtr);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsIpcGetEventHandle(topsIpcEventHandle_t* handle,
                                   topsEvent_t event);
 
@@ -2147,6 +2246,7 @@ topsError_t topsIpcGetEventHandle(topsIpcEventHandle_t* handle,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsIpcOpenEventHandle(topsEvent_t* event,
                                    topsIpcEventHandle_t handle);
 
@@ -2205,6 +2305,7 @@ topsError_t topsIpcOpenEventHandle(topsEvent_t* event,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsIpcOpenEventHandleExt(topsEvent_t* event,
                                    topsIpcEventHandle_t handle,
                                    topsTopologyMapType map,
@@ -2265,6 +2366,7 @@ topsError_t topsIpcOpenEventHandleExt(topsEvent_t* event,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetLastError(void);
 /**
  * @brief Return last error returned by any TOPS runtime API call.
@@ -2309,6 +2411,7 @@ topsError_t topsGetLastError(void);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsPeekAtLastError(void);
 /**
  * @brief Return name of the specified error code in text form.
@@ -2351,6 +2454,7 @@ topsError_t topsPeekAtLastError(void);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 const char* topsGetErrorName(topsError_t tops_error);
 /**
  * @brief Return handy text string message to explain the error which occurred
@@ -2395,6 +2499,7 @@ const char* topsGetErrorName(topsError_t tops_error);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 const char* topsGetErrorString(topsError_t topsError);
 // end doxygen Error
 /**
@@ -2458,6 +2563,7 @@ const char* topsGetErrorString(topsError_t topsError);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamCreate(topsStream_t* stream);
 /**
  * @brief Create an asynchronous stream.
@@ -2510,6 +2616,7 @@ topsError_t topsStreamCreate(topsStream_t* stream);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamCreateWithFlags(topsStream_t* stream, unsigned int flags);
 /**
  * @brief Destroys the specified stream.
@@ -2564,6 +2671,7 @@ topsError_t topsStreamCreateWithFlags(topsStream_t* stream, unsigned int flags);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamDestroy(topsStream_t stream);
 /**
  * @brief Return #topsSuccess if all of the operations in the specified @p stream have completed, or
@@ -2613,6 +2721,7 @@ topsError_t topsStreamDestroy(topsStream_t stream);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamQuery(topsStream_t stream);
 /**
  * @brief Wait for all commands in stream to complete.
@@ -2665,6 +2774,7 @@ topsError_t topsStreamQuery(topsStream_t stream);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamSynchronize(topsStream_t stream);
 /**
  * @brief Make the specified compute stream wait for an event
@@ -2718,6 +2828,7 @@ topsError_t topsStreamSynchronize(topsStream_t stream);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamWaitEvent(topsStream_t stream, topsEvent_t event, unsigned int flags);
 /**
  * Stream CallBack struct
@@ -2771,6 +2882,7 @@ typedef void (*topsStreamCallback_t)(topsStream_t stream, topsError_t status, vo
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamAddCallback(topsStream_t stream, topsStreamCallback_t callback, void* userData,
                                 unsigned int flags);
 
@@ -2816,6 +2928,7 @@ topsError_t topsStreamAddCallback(topsStream_t stream, topsStreamCallback_t call
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamWriteValue32(topsDeviceptr_t dst, int value, unsigned int flags);
 
 /**
@@ -2861,6 +2974,7 @@ topsError_t topsStreamWriteValue32(topsDeviceptr_t dst, int value, unsigned int 
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamWriteValue32Async(topsDeviceptr_t dst, int value, unsigned int flags,
                                         topsStream_t stream __dparm(0));
 
@@ -2906,6 +3020,7 @@ topsError_t topsStreamWriteValue32Async(topsDeviceptr_t dst, int value, unsigned
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamWaitValue32(topsDeviceptr_t dst, int value, unsigned int flags);
 
 /**
@@ -2951,6 +3066,7 @@ topsError_t topsStreamWaitValue32(topsDeviceptr_t dst, int value, unsigned int f
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsStreamWaitValue32Async(topsDeviceptr_t dst, int value, unsigned int flags,
                                        topsStream_t stream __dparm(0));
 // end doxygen Stream
@@ -3021,6 +3137,7 @@ topsError_t topsStreamWaitValue32Async(topsDeviceptr_t dst, int value, unsigned 
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsEventCreateWithFlags(topsEvent_t* event, unsigned flags);
 /**
  *  Create an event object.
@@ -3068,6 +3185,7 @@ topsError_t topsEventCreateWithFlags(topsEvent_t* event, unsigned flags);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsEventCreate(topsEvent_t* event);
 /**
  * @brief Record an event in the specified stream.
@@ -3140,8 +3258,10 @@ topsError_t topsEventCreate(topsEvent_t* event);
  * @endcond
  */
 #ifdef __cplusplus
+TOPS_PUBLIC_API
 topsError_t topsEventRecord(topsEvent_t event, topsStream_t stream = NULL);
 #else
+TOPS_PUBLIC_API
 topsError_t topsEventRecord(topsEvent_t event, topsStream_t stream);
 #endif
 /**
@@ -3196,6 +3316,7 @@ topsError_t topsEventRecord(topsEvent_t event, topsStream_t stream);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsEventDestroy(topsEvent_t event);
 /**
  * @brief Wait for an event to complete.
@@ -3248,6 +3369,7 @@ topsError_t topsEventDestroy(topsEvent_t event);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsEventSynchronize(topsEvent_t event);
 /**
  * @brief Return the elapsed time between two events.
@@ -3318,6 +3440,7 @@ topsError_t topsEventSynchronize(topsEvent_t event);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsEventElapsedTime(float* ms, topsEvent_t start, topsEvent_t stop);
 /**
  * @brief Query event status
@@ -3368,6 +3491,7 @@ topsError_t topsEventElapsedTime(float* ms, topsEvent_t start, topsEvent_t stop)
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsEventQuery(topsEvent_t event);
 // end doxygen Events
 /**
@@ -3423,6 +3547,7 @@ topsError_t topsEventQuery(topsEvent_t event);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsPointerGetAttributes(topsPointerAttribute_t* attributes, const void* ptr);
 /**
  * @brief Returns information about the specified pointer.
@@ -3468,6 +3593,7 @@ topsError_t topsPointerGetAttributes(topsPointerAttribute_t* attributes, const v
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsPointerGetAttribute(void* data, topsPointer_attribute attribute,
                                   topsDeviceptr_t ptr);
 /**
@@ -3516,6 +3642,7 @@ topsError_t topsPointerGetAttribute(void* data, topsPointer_attribute attribute,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsDrvPointerGetAttributes(unsigned int numAttributes, topsPointer_attribute* attributes,
                                       void** data, topsDeviceptr_t ptr);
 /**
@@ -3563,6 +3690,7 @@ topsError_t topsDrvPointerGetAttributes(unsigned int numAttributes, topsPointer_
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMalloc(void** ptr, size_t size);
 /**
  * @brief convert device memory to efcodec memory handle
@@ -3610,6 +3738,7 @@ topsError_t topsMalloc(void** ptr, size_t size);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsExtCodecMemHandle(void** pointer, uint64_t dev_addr,
                     size_t size);
 /**
@@ -3660,6 +3789,7 @@ topsError_t topsExtCodecMemHandle(void** pointer, uint64_t dev_addr,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsExtMallocWithFlags(void** ptr, size_t sizeBytes, unsigned int flags);
 /**
  * @brief Allocate device accessible page locked host memory
@@ -3707,6 +3837,7 @@ topsError_t topsExtMallocWithFlags(void** ptr, size_t sizeBytes, unsigned int fl
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsHostMalloc(void** ptr, size_t size, unsigned int flags);
 /**
  * @brief Get Device pointer from Host Pointer allocated through topsHostMalloc
@@ -3752,6 +3883,7 @@ topsError_t topsHostMalloc(void** ptr, size_t size, unsigned int flags);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsHostGetDevicePointer(void** devPtr, void* hostPtr, unsigned int flags);
 /**
  * @brief Return flags associated with host pointer
@@ -3795,6 +3927,7 @@ topsError_t topsHostGetDevicePointer(void** devPtr, void* hostPtr, unsigned int 
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsHostGetFlags(unsigned int* flagsPtr, void* hostPtr);
 /**
  * @brief Register host memory so it can be accessed from the current device.
@@ -3865,6 +3998,7 @@ topsError_t topsHostGetFlags(unsigned int* flagsPtr, void* hostPtr);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsHostRegister(void* hostPtr, size_t sizeBytes, unsigned int flags);
 /**
  * @brief Un-register host pointer
@@ -3907,6 +4041,7 @@ topsError_t topsHostRegister(void* hostPtr, size_t sizeBytes, unsigned int flags
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsHostUnregister(void* hostPtr);
 /**
  * @brief Free memory allocated by the tops memory allocation API.
@@ -3953,6 +4088,7 @@ topsError_t topsHostUnregister(void* hostPtr);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsFree(void* ptr);
 /**
  * @brief Free memory allocated by the tops host memory allocation API
@@ -3999,6 +4135,7 @@ topsError_t topsFree(void* ptr);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsHostFree(void* ptr);
 /**
  * @brief Copy data from src to dst.
@@ -4059,6 +4196,7 @@ topsError_t topsHostFree(void* ptr);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpy(void* dst, const void* src, size_t sizeBytes, topsMemcpyKind kind);
 /**
  * @brief Copy data from src to dst.
@@ -4111,6 +4249,7 @@ topsError_t topsMemcpy(void* dst, const void* src, size_t sizeBytes, topsMemcpyK
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyWithStream(void* dst, const void* src, size_t sizeBytes,
                                topsMemcpyKind kind, topsStream_t stream);
 /**
@@ -4160,6 +4299,7 @@ topsError_t topsMemcpyWithStream(void* dst, const void* src, size_t sizeBytes,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyHtoD(topsDeviceptr_t dst, void* src, size_t sizeBytes);
 /**
  * @brief Copy data from Device to Host
@@ -4208,6 +4348,7 @@ topsError_t topsMemcpyHtoD(topsDeviceptr_t dst, void* src, size_t sizeBytes);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyDtoH(void* dst, topsDeviceptr_t src, size_t sizeBytes);
 /**
  * @brief Copy data from Device to Device
@@ -4256,6 +4397,7 @@ topsError_t topsMemcpyDtoH(void* dst, topsDeviceptr_t src, size_t sizeBytes);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyDtoD(topsDeviceptr_t dst, topsDeviceptr_t src, size_t sizeBytes);
 /**
  * @brief Copy data from Host to Device asynchronously
@@ -4305,6 +4447,7 @@ topsError_t topsMemcpyDtoD(topsDeviceptr_t dst, topsDeviceptr_t src, size_t size
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyHtoDAsync(topsDeviceptr_t dst, void* src, size_t sizeBytes, topsStream_t stream);
 /**
  * @brief Copy data from Device to Host asynchronously
@@ -4354,6 +4497,7 @@ topsError_t topsMemcpyHtoDAsync(topsDeviceptr_t dst, void* src, size_t sizeBytes
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyDtoHAsync(void* dst, topsDeviceptr_t src, size_t sizeBytes, topsStream_t stream);
 /**
  * @brief Copy data from Device to Device asynchronously
@@ -4403,6 +4547,7 @@ topsError_t topsMemcpyDtoHAsync(void* dst, topsDeviceptr_t src, size_t sizeBytes
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyDtoDAsync(topsDeviceptr_t dst, topsDeviceptr_t src, size_t sizeBytes,
                               topsStream_t stream);
 
@@ -4452,6 +4597,7 @@ topsError_t topsMemcpyDtoDAsync(topsDeviceptr_t dst, topsDeviceptr_t src, size_t
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleGetGlobal(topsDeviceptr_t* dptr, size_t* bytes,
     topsModule_t hmod, const char* name);
 
@@ -4496,6 +4642,7 @@ topsError_t topsModuleGetGlobal(topsDeviceptr_t* dptr, size_t* bytes,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetSymbolAddress(void** devPtr, const void* symbol);
 
 /**
@@ -4539,6 +4686,7 @@ topsError_t topsGetSymbolAddress(void** devPtr, const void* symbol);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsGetSymbolSize(size_t* size, const void* symbol);
 
 /**
@@ -4589,6 +4737,7 @@ topsError_t topsGetSymbolSize(size_t* size, const void* symbol);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyToSymbol(const void* symbol, const void* src,
                              size_t sizeBytes, size_t offset __dparm(0),
                              topsMemcpyKind kind __dparm(topsMemcpyHostToDevice));
@@ -4638,6 +4787,7 @@ topsError_t topsMemcpyToSymbol(const void* symbol, const void* src,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyToSymbolAsync(const void* symbol, const void* src,
                                   size_t sizeBytes, size_t offset,
                                   topsMemcpyKind kind, topsStream_t stream __dparm(0));
@@ -4686,6 +4836,7 @@ topsError_t topsMemcpyToSymbolAsync(const void* symbol, const void* src,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyFromSymbol(void* dst, const void* symbol,
                                size_t sizeBytes, size_t offset __dparm(0),
                                topsMemcpyKind kind __dparm(topsMemcpyDeviceToHost));
@@ -4735,6 +4886,7 @@ topsError_t topsMemcpyFromSymbol(void* dst, const void* symbol,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyFromSymbolAsync(void* dst, const void* symbol,
                                     size_t sizeBytes, size_t offset,
                                     topsMemcpyKind kind,
@@ -4800,6 +4952,7 @@ topsError_t topsMemcpyFromSymbolAsync(void* dst, const void* symbol,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemcpyAsync(void* dst, const void* src, size_t sizeBytes, topsMemcpyKind kind,
                           topsStream_t stream __dparm(0));
 /**
@@ -4844,6 +4997,7 @@ topsError_t topsMemcpyAsync(void* dst, const void* src, size_t sizeBytes, topsMe
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemset(void* dst, int value, size_t sizeBytes);
 /**
  * @brief Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
@@ -4887,6 +5041,7 @@ topsError_t topsMemset(void* dst, int value, size_t sizeBytes);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetD8(topsDeviceptr_t dest, unsigned char value, size_t count);
 /**
  * @brief Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
@@ -4936,6 +5091,7 @@ topsError_t topsMemsetD8(topsDeviceptr_t dest, unsigned char value, size_t count
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetD8Async(topsDeviceptr_t dest, unsigned char value, size_t count, topsStream_t stream __dparm(0));
 /**
  * @brief Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
@@ -4979,6 +5135,7 @@ topsError_t topsMemsetD8Async(topsDeviceptr_t dest, unsigned char value, size_t 
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetD16(topsDeviceptr_t dest, unsigned short value, size_t count);
 /**
  * @brief Fills the first sizeBytes bytes of the memory area pointed to by dest with the constant
@@ -5028,6 +5185,7 @@ topsError_t topsMemsetD16(topsDeviceptr_t dest, unsigned short value, size_t cou
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetD16Async(topsDeviceptr_t dest, unsigned short value, size_t count, topsStream_t stream __dparm(0));
 /**
  * @brief Fills the memory area pointed to by dest with the constant integer
@@ -5071,6 +5229,7 @@ topsError_t topsMemsetD16Async(topsDeviceptr_t dest, unsigned short value, size_
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetD32(topsDeviceptr_t dest, int value, size_t count);
 /**
  * @brief Fills the first sizeBytes bytes of the memory area pointed to by dev with the constant
@@ -5120,6 +5279,7 @@ topsError_t topsMemsetD32(topsDeviceptr_t dest, int value, size_t count);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetAsync(void* dst, int value, size_t sizeBytes, topsStream_t stream __dparm(0));
 /**
  * @brief Fills the memory area pointed to by dev with the constant integer
@@ -5169,6 +5329,7 @@ topsError_t topsMemsetAsync(void* dst, int value, size_t sizeBytes, topsStream_t
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemsetD32Async(topsDeviceptr_t dst, int value, size_t count,
                              topsStream_t stream __dparm(0));
 /**
@@ -5214,6 +5375,7 @@ topsError_t topsMemsetD32Async(topsDeviceptr_t dst, int value, size_t count,
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsMemGetInfo(size_t* free, size_t* total);
 /**
  * @brief Query memory pointer info.
@@ -5256,6 +5418,7 @@ topsError_t topsMemGetInfo(size_t* free, size_t* total);
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsMemPtrGetInfo(void* ptr, size_t* size);
 
 /**
@@ -5300,6 +5463,7 @@ topsError_t topsMemPtrGetInfo(void* ptr, size_t* size);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsMemGetAddressRange(topsDeviceptr_t* pbase, size_t* psize, topsDeviceptr_t dptr);
 // doxygen end Memory
 /**
@@ -5359,6 +5523,7 @@ topsError_t topsMemGetAddressRange(topsDeviceptr_t* pbase, size_t* psize, topsDe
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsDeviceCanAccessPeer(int* canAccess, int deviceId, int peerDeviceId);
 /**
  * @brief Set peer/esl access property.
@@ -5401,6 +5566,7 @@ topsError_t topsDeviceCanAccessPeer(int* canAccess, int deviceId, int peerDevice
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsDeviceEnablePeerAccess(int peerDeviceId, unsigned int flags);
 /**
  * @brief Set peer access property for peer device's region.
@@ -5445,6 +5611,7 @@ topsError_t topsDeviceEnablePeerAccess(int peerDeviceId, unsigned int flags);
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsDeviceEnablePeerAccessRegion(int peerDeviceId, void *peerDevPtr, size_t size, void **devPtr);
 /**
  * @brief destroy peer access property for peer device's region.
@@ -5488,6 +5655,7 @@ topsError_t topsDeviceEnablePeerAccessRegion(int peerDeviceId, void *peerDevPtr,
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsDeviceDisablePeerAccessRegion(int peerDeviceId, void *peerDevPtr, size_t size);
 /**
  * @brief Copies memory from one device to memory on another device.
@@ -5539,6 +5707,7 @@ topsError_t topsDeviceDisablePeerAccessRegion(int peerDeviceId, void *peerDevPtr
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsMemcpyPeer(void* dst, int dstDevice, const void* src, int srcDevice,
                            size_t sizeBytes);
 /**
@@ -5593,6 +5762,7 @@ topsError_t topsMemcpyPeer(void* dst, int dstDevice, const void* src, int srcDev
  * @endcond
  **/
 
+TOPS_PUBLIC_API
 topsError_t topsMemcpyPeerAsync(void* dst, int dstDevice, const void* src, int srcDevice,
                                 size_t sizeBytes, topsStream_t stream);
 
@@ -5648,6 +5818,7 @@ topsError_t topsMemcpyPeerAsync(void* dst, int dstDevice, const void* src, int s
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsMemcpyPeerExt(void* dst, int dstDevice, const void* src, int srcDevice,
                               size_t sizeBytes, topsTopologyMapType map, int port);
 
@@ -5704,6 +5875,7 @@ topsError_t topsMemcpyPeerExt(void* dst, int dstDevice, const void* src, int src
  *
  * @endcond
  **/
+TOPS_PUBLIC_API
 topsError_t topsMemcpyPeerExtAsync(void* dst, int dstDevice, const void* src, int srcDevice,
                                 size_t sizeBytes, topsTopologyMapType map, int port,
                                 topsStream_t stream);
@@ -5762,6 +5934,7 @@ topsError_t topsMemcpyPeerExtAsync(void* dst, int dstDevice, const void* src, in
  * @endcond
  *
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleLoad(topsModule_t* module, const char* fname);
 /**
  * @brief Frees the module
@@ -5804,6 +5977,7 @@ topsError_t topsModuleLoad(topsModule_t* module, const char* fname);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleUnload(topsModule_t module);
 /**
  * @brief Function with kname will be extracted if present in module
@@ -5848,6 +6022,7 @@ topsError_t topsModuleUnload(topsModule_t module);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleGetFunction(topsFunction_t* function, topsModule_t module, const char* kname);
 /**
  * @brief Find out attributes for a given function.
@@ -5890,6 +6065,7 @@ topsError_t topsModuleGetFunction(topsFunction_t* function, topsModule_t module,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsFuncGetAttributes(struct topsFuncAttributes* attr, const void* func);
 /**
  * @brief Find out a specific attribute for a given function.
@@ -5933,6 +6109,7 @@ topsError_t topsFuncGetAttributes(struct topsFuncAttributes* attr, const void* f
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsFuncGetAttribute(int* value, topsFunction_attribute attrib, topsFunction_t hfunc);
 /**
  * @brief builds module from code object which resides in host memory. Image is pointer to that
@@ -5976,6 +6153,7 @@ topsError_t topsFuncGetAttribute(int* value, topsFunction_attribute attrib, tops
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleLoadData(topsModule_t* module, const void* image);
 /**
  * @brief builds module from code object which resides in host memory. Image is pointer to that
@@ -6022,6 +6200,7 @@ topsError_t topsModuleLoadData(topsModule_t* module, const void* image);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleLoadDataEx(topsModule_t* module, const void* image, unsigned int numOptions,
                                topsJitOption* options, void** optionValues);
 /**
@@ -6085,6 +6264,7 @@ topsError_t topsModuleLoadDataEx(topsModule_t* module, const void* image, unsign
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsModuleLaunchKernel(topsFunction_t f, unsigned int gridDimX, unsigned int gridDimY,
                                  unsigned int gridDimZ, unsigned int blockDimX,
                                  unsigned int blockDimY, unsigned int blockDimZ,
@@ -6141,6 +6321,7 @@ topsError_t topsModuleLaunchKernel(topsFunction_t f, unsigned int gridDimX, unsi
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsLaunchCooperativeKernel(const void* f, dim3 gridDim, dim3 blockDimX,
                                       void** kernelParams, size_t sharedMemBytes,
                                       topsStream_t stream);
@@ -6203,6 +6384,7 @@ topsError_t topsLaunchCooperativeKernel(const void* f, dim3 gridDim, dim3 blockD
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem __dparm(0), topsStream_t stream __dparm(0));
 /**
  * @brief Set a kernel argument.
@@ -6246,6 +6428,7 @@ topsError_t topsConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem __dp
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsSetupArgument(const void* arg, size_t size, size_t offset);
 /**
  * @brief Launch a kernel.
@@ -6287,6 +6470,7 @@ topsError_t topsSetupArgument(const void* arg, size_t size, size_t offset);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsLaunchByPtr(const void* func);
 /**
  * @brief Push configuration of a kernel launch.
@@ -6336,6 +6520,7 @@ topsError_t topsLaunchByPtr(const void* func);
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t __topsPushCallConfiguration(dim3 gridDim,
                                       dim3 blockDim,
                                       size_t sharedMem __dparm(0),
@@ -6388,6 +6573,7 @@ topsError_t __topsPushCallConfiguration(dim3 gridDim,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t __topsPopCallConfiguration(dim3 *gridDim,
                                      dim3 *blockDim,
                                      size_t *sharedMem,
@@ -6439,12 +6625,58 @@ topsError_t __topsPopCallConfiguration(dim3 *gridDim,
  *
  * @endcond
  */
+TOPS_PUBLIC_API
 topsError_t topsLaunchKernel(const void* function_address,
                            dim3 numBlocks,
                            dim3 dimBlocks,
                            void** args,
                            size_t sharedMemBytes __dparm(0),
                            topsStream_t stream __dparm(0));
+
+/**
+ * @brief C compliant kernel launch API
+ *
+ * @param [in] config - Launch Configuration.
+ * @param [in] func - Kernel to launch
+ * @param [in] args - Array of pointers to kernel parameters
+ * @returns #topsSuccess, #topsErrorInvalidValue, topsInvalidDevice
+ *
+ * @cond INTERNAL
+ *
+ * ####Detail Design#####
+ *
+ *
+ * ####Competitive Analysis#####
+ *   -                | Cuda API                 |
+ * ------------------ | ------------------------ |
+ * Interface          | cudaLaunchKernel         |
+ * Benchmark          | -                        |
+ * First Shown Ver.   | -                        |
+ *
+ * ####Compatibility Analysis#####
+ *   hardware       | compatible
+ * -------------    | -------------
+ *  gcu100 (leo)    | NO
+ *  gcu200 (pavo)   | YES
+ *  gcu210 (dorado) | YES
+ *  gcu300 (scorpio)| YES
+ *
+ *  software        | support
+ * -------------    | -------------
+ *  2.3_topsrider   | YES
+ *
+ * ####Dependency Analysis#####
+ * Depend Module | Version
+ * ------------- | -------------
+ * KMD           | 97.0
+ *
+ * ####Benchmark Analysis#####
+ *
+ * @endcond
+ */
+topsError_t topsLaunchKernelExC(const topsLaunchConfig_t* config,
+                               const void* func, void** args);
+
 // doxygen end Clang launch
 /**
  * @}
@@ -6614,6 +6846,7 @@ typedef enum topsStreamUpdateCaptureDependenciesFlags {
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMallocAsync(void** dev_ptr, size_t size, topsStream_t stream, uint64_t flags);
 /**
  * @brief Frees memory with stream ordered semantics
@@ -6639,6 +6872,7 @@ topsError_t topsMallocAsync(void** dev_ptr, size_t size, topsStream_t stream, ui
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsFreeAsync(void* dev_ptr, topsStream_t stream);
 /**
  * @brief Releases freed memory back to the OS
@@ -6667,6 +6901,7 @@ topsError_t topsFreeAsync(void* dev_ptr, topsStream_t stream);
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolTrimTo(topsMemPool_t mem_pool, size_t min_bytes_to_hold);
 /**
  * @brief Sets attributes of a memory pool
@@ -6706,6 +6941,7 @@ topsError_t topsMemPoolTrimTo(topsMemPool_t mem_pool, size_t min_bytes_to_hold);
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolSetAttribute(topsMemPool_t mem_pool, topsMemPoolAttr attr, void* value);
 /**
  * @brief Gets attributes of a memory pool
@@ -6745,6 +6981,7 @@ topsError_t topsMemPoolSetAttribute(topsMemPool_t mem_pool, topsMemPoolAttr attr
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolGetAttribute(topsMemPool_t mem_pool, topsMemPoolAttr attr, void* value);
 /**
  * @brief Controls visibility of the specified pool between devices
@@ -6763,6 +7000,7 @@ topsError_t topsMemPoolGetAttribute(topsMemPool_t mem_pool, topsMemPoolAttr attr
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolSetAccess(topsMemPool_t mem_pool, const topsMemAccessDesc* desc_list, size_t count);
 /**
  * @brief Returns the accessibility of a pool from a device
@@ -6783,6 +7021,7 @@ topsError_t topsMemPoolSetAccess(topsMemPool_t mem_pool, const topsMemAccessDesc
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolGetAccess(topsMemAccessFlags* flags, topsMemPool_t mem_pool, topsMemLocation* location);
 /**
  * @brief Creates a memory pool
@@ -6807,7 +7046,9 @@ topsError_t topsMemPoolGetAccess(topsMemAccessFlags* flags, topsMemPool_t mem_po
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolCreate(topsMemPool_t* mem_pool, const topsMemPoolProps* pool_props);
+TOPS_PUBLIC_API
 topsError_t topsDeviceGetMemPool(topsMemPool_t* mem_pool, int device);
 /**
  * @brief Destroys the specified memory pool
@@ -6835,6 +7076,7 @@ topsError_t topsDeviceGetMemPool(topsMemPool_t* mem_pool, int device);
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolDestroy(topsMemPool_t mem_pool);
 /**
  * @brief Allocates memory from a specified pool with stream ordered semantics.
@@ -6869,6 +7111,7 @@ topsError_t topsMemPoolDestroy(topsMemPool_t mem_pool);
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMallocFromPoolAsync(void** dev_ptr, size_t size, topsMemPool_t mem_pool, topsStream_t stream);
 /**
  * @brief Exports a memory pool to the requested handle type.
@@ -6896,6 +7139,7 @@ topsError_t topsMallocFromPoolAsync(void** dev_ptr, size_t size, topsMemPool_t m
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolExportToShareableHandle(
     void*                      shared_handle,
     topsMemPool_t               mem_pool,
@@ -6924,6 +7168,7 @@ topsError_t topsMemPoolExportToShareableHandle(
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolImportFromShareableHandle(
     topsMemPool_t*              mem_pool,
     void*                      shared_handle,
@@ -6948,6 +7193,7 @@ topsError_t topsMemPoolImportFromShareableHandle(
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolExportPointer(topsMemPoolPtrExportData* export_data, void* dev_ptr);
 /**
  * @brief Import a memory pool allocation from another process.
@@ -6977,6 +7223,7 @@ topsError_t topsMemPoolExportPointer(topsMemPoolPtrExportData* export_data, void
  *
  * @note  This API is implemented on Linux, under development on Windows.
  */
+TOPS_PUBLIC_API
 topsError_t topsMemPoolImportPointer(
     void**                   dev_ptr,
     topsMemPool_t             mem_pool,
@@ -7020,9 +7267,6 @@ topsError_t topsMemPoolImportPointer(
 } /* extern "c" */
 #endif
 
-#ifdef __GNUC__
-#pragma GCC visibility pop
-#endif
 // doxygen end TOPS API
 /**
  *   @}
@@ -7044,6 +7288,37 @@ topsError_t topsMemPoolImportPointer(
  * @see topsMalloc
  */
 #if defined(__cplusplus) && !defined(__TOPS_DISABLE_CPP_FUNCTIONS__)
+
+topsError_t topsLaunchKernelPackArgs(void ** pargs);
+
+template < typename T, typename... ActTypes >
+topsError_t topsLaunchKernelPackArgs(void ** pargs, const T &first,
+                            ActTypes &&... args) {
+  *pargs = reinterpret_cast<void *>(&first);
+  return topsLaunchKernelPackArgs(pargs + 1, args...);
+}
+
+template < typename... ExpTypes, typename... ActTypes >
+topsError_t topsLaunchKernelEx(const topsLaunchConfig_t* config,
+                       void(*kernel)(ExpTypes...),
+                       ActTypes &&... args) {
+  void ** pargs = reinterpret_cast<void **>(
+          malloc(sizeof...(args) * sizeof(void *)));
+  topsError_t status;
+  status = topsLaunchKernelPackArgs(pargs, args...);
+  if (status != topsSuccess) {
+    free(pargs);
+    return status;
+  }
+  status = topsLaunchKernelExC(config, (const void*)kernel, pargs);
+  if (status != topsSuccess) {
+    free(pargs);
+    return status;
+  }
+  free(pargs);
+  return status;
+}
+
 template <class T>
 static inline topsError_t topsMalloc(T** devPtr, size_t size) {
     return topsMalloc((void**)devPtr, size);
