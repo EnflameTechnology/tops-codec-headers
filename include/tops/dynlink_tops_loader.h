@@ -137,6 +137,7 @@ typedef struct TopsRuntimesFunctions_t {
     ttopsGetErrorName         *lib_topsGetErrorName;
     ttopsGetErrorString       *lib_topsGetErrorString;
     ttopsMalloc               *lib_topsMalloc;
+    ttopsExtMallocWithFlags   *lib_topsExtMallocWithFlags;
     ttopsPointerGetAttributes *lib_topsPointerGetAttributes;
     ttopsPointerGetAttribute  *lib_topsPointerGetAttribute;
     ttopsHostMalloc           *lib_topsHostMalloc;
@@ -232,6 +233,8 @@ static inline int topsruntimes_load_functions(TopsRuntimesFunctions **functions)
                                              "topsGetErrorString");
     LOAD_SYMBOL(lib_topsMalloc,               ttopsMalloc,
                                              "topsMalloc");
+    LOAD_SYMBOL(lib_topsExtMallocWithFlags,   ttopsExtMallocWithFlags,
+                                             "topsExtMallocWithFlags");
     LOAD_SYMBOL(lib_topsPointerGetAttributes, ttopsPointerGetAttributes,
                                              "topsPointerGetAttributes");
     LOAD_SYMBOL(lib_topsPointerGetAttribute,  ttopsPointerGetAttribute,
