@@ -19,6 +19,8 @@ set(ffmpeg_gcu_header
     ${OUTPUT_DIR}/include/tops/tops_common.h
     ${OUTPUT_DIR}/include/tops/tops_runtime_api.h
     ${OUTPUT_DIR}/include/tops/tops_version.h
+    ${OUTPUT_DIR}/lib/pkgconfig/tops_ext_experimental.h
+    ${OUTPUT_DIR}/lib/pkgconfig/tops_ext.h
     ${OUTPUT_DIR}/lib/pkgconfig/tops.pc
 )
 

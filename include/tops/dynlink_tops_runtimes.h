@@ -19,6 +19,7 @@
 #define _DYNLINK_TOPS_RUNTIMES_H_
 
 #include "tops/tops_runtime_api.h"
+#include "tops/tops_ext.h"
 
 typedef topsError_t ttopsInit(unsigned int flags);
 typedef topsError_t ttopsDriverGetVersion(int* driverVersion);
@@ -69,5 +70,8 @@ typedef topsError_t ttopsMemcpyHtoDAsync(topsDeviceptr_t dst, void* src, size_t 
 typedef topsError_t ttopsMemcpyDtoHAsync(void* dst, topsDeviceptr_t src, size_t sizeBytes, topsStream_t stream);
 typedef topsError_t ttopsMemcpyDtoDAsync(topsDeviceptr_t dst, topsDeviceptr_t src, size_t sizeBytes,topsStream_t stream);
 typedef topsError_t ttopsMemset(void* dst, int value, size_t sizeBytes);
+
+//tops_ext.h
+typedef topsError_t ttopsExtMallocWithAffinity(void **ptr, size_t size,uint64_t bank, unsigned int flags);
                                                               
-#endif //_DYNLINK_TOPS_RUNTIMES_H_
+#endif //_DYNLINK_TOPS_RUNTIMES_H_s

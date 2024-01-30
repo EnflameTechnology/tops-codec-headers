@@ -149,6 +149,7 @@ typedef struct TopsRuntimesFunctions_t {
     ttopsMemset               *lib_topsMemset;
     ttopsFree                 *lib_topsFree;
     ttopsHostFree             *lib_topsHostFree;
+    ttopsExtMallocWithAffinity *lib_topsExtMallocWithAffinity;
     /*TODO*/
     TOPS_LIB_HANDLE lib;
 } TopsRuntimesFunctions;
@@ -257,6 +258,8 @@ static inline int topsruntimes_load_functions(TopsRuntimesFunctions **functions)
                                              "topsFree");
     LOAD_SYMBOL(lib_topsHostFree,             ttopsHostFree,
                                              "topsHostFree");
+    LOAD_SYMBOL(lib_topsExtMallocWithAffinity, ttopsExtMallocWithAffinity,
+                                             "topsExtMallocWithAffinity");
     GENERIC_LOAD_FUNC_FINALE(topsruntimes);
 }
 
