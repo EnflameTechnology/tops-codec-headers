@@ -105,6 +105,7 @@ error:                                                                        \
     free(*functions);                                                         \
     *functions = NULL;
 
+
 /* topscodec function definition */
 typedef struct TopsCodecFunctions_t {
     ttopscodecGetLibVersion   *lib_topscodecGetLibVersion;
@@ -154,44 +155,48 @@ typedef struct TopsRuntimesFunctions_t {
     TOPS_LIB_HANDLE lib;
 } TopsRuntimesFunctions;
 
-static void topscodec_free_functions(TopsCodecFunctions **functions)
-{
-    GENERIC_FREE_FUNC();
-}
+#ifdef TOPSCODEC_FREE_FUNCTIONS
+    static void topscodec_free_functions(TopsCodecFunctions **functions)
+    {
+        GENERIC_FREE_FUNC();
+    }
+#endif
 
 static void topsruntimes_free_functions(TopsRuntimesFunctions **functions)
 {
     GENERIC_FREE_FUNC();
 }
 
-static int topscodec_load_functions(TopsCodecFunctions **functions)
-{
-    GENERIC_LOAD_FUNC_PREAMBLE(TopsCodecFunctions,
-                                topscodec,
-                                TOPSCODEC_LIBNAME);
+#ifdef TOPSCODEC_LOAD_FUNCTIONS
+    static int topscodec_load_functions(TopsCodecFunctions **functions)
+    {
+        GENERIC_LOAD_FUNC_PREAMBLE(TopsCodecFunctions,
+                                    topscodec,
+                                    TOPSCODEC_LIBNAME);
 
-    LOAD_SYMBOL(lib_topscodecGetLibVersion,   ttopscodecGetLibVersion,
-                                             "topscodecGetLibVersion");
-    LOAD_SYMBOL(lib_topscodecGetMemoryHandle, ttopscodecGetMemoryHandle,
-                                             "topscodecGetMemoryHandle");
-    LOAD_SYMBOL(lib_topscodecDecGetCaps,      ttopscodecDecGetCaps,
-                                             "topscodecDecGetCaps");
-    LOAD_SYMBOL(lib_topscodecDecCreate,       ttopscodecDecCreate,
-                                             "topscodecDecCreate");
-    LOAD_SYMBOL(lib_topscodecDecSetParams,    ttopscodecDecSetParams,
-                                             "topscodecDecSetParams");
-    LOAD_SYMBOL(lib_topscodecDecDestroy,      ttopscodecDecDestroy,
-                                             "topscodecDecDestroy");
-    LOAD_SYMBOL(lib_topscodecDecodeStream,    ttopscodecDecodeStream,
-                                             "topscodecDecodeStream");
-    LOAD_SYMBOL(lib_topscodecDecFrameMap,     ttopscodecDecFrameMap,
-                                             "topscodecDecFrameMap");
-    LOAD_SYMBOL(lib_topscodecDecFrameUnmap,   ttopscodecDecFrameUnmap,
-                                             "topscodecDecFrameUnmap");
-    //LOAD_SYMBOL(lib_topscodecGetLoading,      ttopscodecGetLoading,
-    //                                         "topscodecGetLoading");
-    GENERIC_LOAD_FUNC_FINALE(topscodec);
-}
+        LOAD_SYMBOL(lib_topscodecGetLibVersion,   ttopscodecGetLibVersion,
+                                                 "topscodecGetLibVersion");
+        LOAD_SYMBOL(lib_topscodecGetMemoryHandle, ttopscodecGetMemoryHandle,
+                                                 "topscodecGetMemoryHandle");
+        LOAD_SYMBOL(lib_topscodecDecGetCaps,      ttopscodecDecGetCaps,
+                                                 "topscodecDecGetCaps");
+        LOAD_SYMBOL(lib_topscodecDecCreate,       ttopscodecDecCreate,
+                                                 "topscodecDecCreate");
+        LOAD_SYMBOL(lib_topscodecDecSetParams,    ttopscodecDecSetParams,
+                                                 "topscodecDecSetParams");
+        LOAD_SYMBOL(lib_topscodecDecDestroy,      ttopscodecDecDestroy,
+                                                 "topscodecDecDestroy");
+        LOAD_SYMBOL(lib_topscodecDecodeStream,    ttopscodecDecodeStream,
+                                                 "topscodecDecodeStream");
+        LOAD_SYMBOL(lib_topscodecDecFrameMap,     ttopscodecDecFrameMap,
+                                                 "topscodecDecFrameMap");
+        LOAD_SYMBOL(lib_topscodecDecFrameUnmap,   ttopscodecDecFrameUnmap,
+                                                 "topscodecDecFrameUnmap");
+        /*//LOAD_SYMBOL(lib_topscodecGetLoading,      ttopscodecGetLoading,
+        //                                         "topscodecGetLoading");*/
+        GENERIC_LOAD_FUNC_FINALE(topscodec);
+    }
+#endif
 
 static inline int topsruntimes_load_functions(TopsRuntimesFunctions **functions)
 {
