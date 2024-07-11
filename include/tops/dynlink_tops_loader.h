@@ -37,45 +37,60 @@ enum dyn_debug_level {
   DYN_DEBUG_LEVEL_INFO,
   DYN_DEBUG_LEVEL_DEBUG
 };
-
-#ifndef dynlink_efdebug
-#define dynlink_efdebug  DYN_DEBUG_LEVEL_DEBUG
-#endif
+static int dynlink_efdebug = DYN_DEBUG_LEVEL_ERR;
+static void dynlink_set_debug_level(int level)
+{
+    dynlink_efdebug = level;
+}
 
 #define PRINT printf
-#define DYN_TOPS_LOG_FUNC(...)                                                \
+#define DYN_TOPS_LOG_FUNC_ERR(...)                                            \
   do {                                                                        \
-    if (dynlink_efdebug >= DYN_DEBUG_LEVEL_DEBUG) {                           \
+    if (dynlink_efdebug >= DYN_DEBUG_LEVEL_ERR) {                             \
       PRINT(__VA_ARGS__);                                                     \
     }                                                                         \
+  } while (0)
+
+#define DYN_TOPS_LOG_FUNC_INFO(...)                                           \
+  do {                                                                        \
+    if (dynlink_efdebug >= DYN_DEBUG_LEVEL_INFO) {                            \
+      PRINT(__VA_ARGS__);                                                     \
+    }                                                                         \
+  } while (0)
+
+#define DYN_TOPS_LOG_FUNC_DEBUG(...)                                          \
+  do {                                                                        \
+      if (dynlink_efdebug >= DYN_DEBUG_LEVEL_DEBUG) {                         \
+        PRINT(__VA_ARGS__);                                                   \
+      }                                                                       \
   } while (0)
 
 #define LOAD_LIBRARY(l, path)                                                 \
     do {                                                                      \
         if (!((l) = TOPS_LOAD_FUNC(path))) {                                  \
-            DYN_TOPS_LOG_FUNC("Cannot load %s\n", path);                      \
+            DYN_TOPS_LOG_FUNC_ERR("Cannot load %s\n", path);                  \
             ret = -1;                                                         \
             goto error;                                                       \
         }                                                                     \
-        DYN_TOPS_LOG_FUNC("Loaded lib: %s\n", path);                          \
+        DYN_TOPS_LOG_FUNC_INFO("Loaded lib: %s\n", path);                     \
     } while (0)
 
 #define LOAD_SYMBOL(fun, tp, symbol)                                          \
     do {                                                                      \
         if (!((f->fun) = (tp*)TOPS_SYM_FUNC(f->lib, symbol))) {               \
-            DYN_TOPS_LOG_FUNC("Cannot load %s\n", symbol);                    \
+            DYN_TOPS_LOG_FUNC_ERR("Cannot load %s\n", symbol);                \
             ret = -1;                                                         \
             goto error;                                                       \
         }                                                                     \
-        DYN_TOPS_LOG_FUNC("Loaded sym: %s\n", symbol);                        \
+        DYN_TOPS_LOG_FUNC_INFO("Loaded sym: %s\n", symbol);                   \
     } while (0)
 
 #define LOAD_SYMBOL_OPT(fun, tp, symbol)                                      \
     do {                                                                      \
         if (!((f->fun) = (tp*)TOPS_SYM_FUNC(f->lib, symbol))) {               \
-            DYN_TOPS_LOG_FUNC("Cannot load optional %s\n", symbol);           \
+            DYN_TOPS_LOG_FUNC_ERR("Cannot load optional %s\n", symbol);       \
         } else {                                                              \
-            DYN_TOPS_LOG_FUNC("Loaded sym: %s\n", symbol);                    \
+            DYN_TOPS_LOG_FUNC_DEBUG("Loaded sym: %s\n", symbol);              \
         }                                                                     \
     } while (0)
 
@@ -275,7 +290,7 @@ static inline int tops_runtimes_check(void *topsGetErrorName_fn,
     const char *err_name;
     const char *err_string;
 
-    DYN_TOPS_LOG_FUNC("Calling %s\n", func);
+    DYN_TOPS_LOG_FUNC_DEBUG("Calling %s\n", func);
 
     if (err == topsSuccess)
         return 0;
@@ -283,11 +298,11 @@ static inline int tops_runtimes_check(void *topsGetErrorName_fn,
     err_name = ((ttopsGetErrorName *)topsGetErrorName_fn)(err);
     err_string = ((ttopsGetErrorString *)topsGetErrorString_fn)(err);
 
-    DYN_TOPS_LOG_FUNC("%s failed", func);
+    DYN_TOPS_LOG_FUNC_ERR("%s failed", func);
     if (err_name && err_string)
-        DYN_TOPS_LOG_FUNC(" -> %s: %s", err_name, err_string);
+        DYN_TOPS_LOG_FUNC_ERR(" -> %s: %s", err_name, err_string);
 
-    DYN_TOPS_LOG_FUNC("\n");
+    DYN_TOPS_LOG_FUNC_ERR("\n");
     return err;
 }
 
