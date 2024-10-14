@@ -1,3 +1,3 @@
 # dynlink_tops_headers
 
-这个头文件主要用来动态加载topsruntimes的库和topscodec
+用来动态加载topsruntimes的库和topscodec
